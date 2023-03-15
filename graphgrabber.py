@@ -1,7 +1,10 @@
 import sark.qt
 from PIL import Image, ImageChops
 import idaapi
-from cStringIO import StringIO
+import ida_kernwin
+from io import BytesIO
+
+Image.MAX_IMAGE_PIXELS = None
 
 # Those are a bit of voodoo.
 # When a trimming an axis from both ends, the size on that axis is set to the
@@ -24,8 +27,11 @@ WIDTH_INCREMENT = 1000
 def trim(im, bg=None):
     if bg is None:
         bg = get_bg(im)
+        
     diff = ImageChops.difference(im, bg)
+    diff = diff.convert('RGB')
     bbox = diff.getbbox()
+    
     if bbox:
         return im.crop(bbox), bbox
 
@@ -66,11 +72,11 @@ def grab_graph():
 
     graph_image = None
 
-    for iteration in xrange(MAX_ITERATIONS):
+    for iteration in range(MAX_ITERATIONS):
         if height >= MAX_HEIGHT or width >= MAX_WIDTH:
             break
 
-        print 'Iteration: {}'.format(iteration)
+        print('Iteration: {}'.format(iteration))
 
         sark.qt.resize_widget(widget, width, height)
 
@@ -81,18 +87,19 @@ def grab_graph():
         try:
             trimmed, (left, upper, right, lower) = trim(image)
         except TypeError:
+            print("Trim failed")
             width += WIDTH_INCREMENT
             height += HEIGHT_INCREMENT
             continue
 
-        print 'Desired:', width, height
-        print 'Image:', image.width, image.height
-        print 'Trimmed:', trimmed.width, trimmed.height
-        print 'Bounds:', left, upper, right, lower
+        print('Desired:', width, height)
+        print('Image:', image.width, image.height)
+        print('Trimmed:', trimmed.width, trimmed.height)
+        print('Bounds:', left, upper, right, lower)
 
         resize = False
         if left == 0 or right == image.width:
-            print 'Increase width'
+            print('Increase width')
             width += WIDTH_INCREMENT
             resize = True
 
@@ -100,7 +107,7 @@ def grab_graph():
             width = trimmed.width + WIDTH_MARGIN
 
         if upper == 0 or lower == image.height:
-            print 'Increase height'
+            print('Increase height')
             height += HEIGHT_INCREMENT
             resize = True
 
@@ -117,19 +124,20 @@ def grab_graph():
 
 def grab_image(widget):
     image_data = sark.qt.capture_widget(widget)
-    image = Image.open(StringIO(image_data))
+
+    image = Image.open(BytesIO(image_data))
     return image
 
 
 def show(w):
     image_data = sark.qt.capture_widget(w)
-    image = Image.open(StringIO(image_data))
+    image = Image.open(BytesIO(image_data))
     image.show()
 
 
 def capture_graph(path=None):
     if not path:
-        path = idaapi.askfile_c(1, 'graph.png', 'Save Graph...')
+        path = ida_kernwin.ask_file(1, 'graph.png', 'Save Graph...')
     if not path:
         return
 
