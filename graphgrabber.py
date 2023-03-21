@@ -19,10 +19,13 @@ MAX_ITERATIONS = 30
 MAX_WIDTH = 100000
 MAX_HEIGHT = 100000
 
+BORDER = 30
+
 # Used to increment the size when needed. Higher values may speed up capture.
 HEIGHT_INCREMENT = 1000
 WIDTH_INCREMENT = 1000
 
+background_color = None
 
 def trim(im, bg=None):
     if bg is None:
@@ -37,7 +40,10 @@ def trim(im, bg=None):
 
 
 def get_bg(im):
-    return Image.new(im.mode, im.size, im.getpixel((0, 0)))
+    global background_color
+    color = im.getpixel((0, 0))
+    background_color = color
+    return Image.new(im.mode, im.size, color)
 
 
 def center_graph():
@@ -134,6 +140,17 @@ def show(w):
     image = Image.open(BytesIO(image_data))
     image.show()
 
+def add_border(im):
+    if background_color is None:
+        return im
+        
+    size = im.size
+    width = size[0] + (BORDER * 2)
+    height = size[1] + (BORDER * 2)
+    new_im = Image.new(im.mode, (width, height), background_color)
+    new_im.paste(im, (BORDER, BORDER))
+    
+    return new_im
 
 def capture_graph(path=None):
     if not path:
@@ -142,6 +159,7 @@ def capture_graph(path=None):
         return
 
     image = grab_graph()
+    image = add_border(image)
     try:
         image.save(path, format='PNG')
     except:
